@@ -1,0 +1,6 @@
+linkprobe
+Copyright (c) 2026 Robert Mongold contributors
+
+This project is a new codebase inspired by the goals of speedtest-rs
+(https://github.com/nelsonjchen/speedtest-rs) by Nelson Chen and contributors,
+licensed under MIT OR Apache-2.0. It is not affliliated with Ookla or speedtest.net.
