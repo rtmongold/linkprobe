@@ -8,6 +8,8 @@ pub struct Server {
     pub base_url: String,
     pub country: Option<String>,
     pub sponsor: Option<String>,
+    /// iperf3 port (LibreSpeed leaves this `None`).
+    pub port: Option<u16>,
     /// Relative download path (default LibreSpeed: `backend/garbage.php`).
     #[serde(default = "default_dl_path")]
     pub dl_path: String,
@@ -40,6 +42,22 @@ impl Server {
             base_url,
             country: None,
             sponsor: None,
+            port: None,
+            dl_path: default_dl_path(),
+            ul_path: default_ul_path(),
+            ping_path: default_ping_path(),
+        }
+    }
+
+    pub fn iperf3(host: impl Into<String>, port: u16) -> Self {
+        let host = host.into();
+        Self {
+            id: host.clone(),
+            name: format!("{host}:{port}"),
+            base_url: host,
+            country: None,
+            sponsor: None,
+            port: Some(port),
             dl_path: default_dl_path(),
             ul_path: default_ul_path(),
             ping_path: default_ping_path(),
