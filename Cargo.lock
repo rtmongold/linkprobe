@@ -632,6 +632,7 @@ dependencies = [
  "mockito",
  "reqwest",
  "serde",
+ "serde_json",
  "thiserror",
  "url",
 ]

@@ -7,16 +7,18 @@ Not affiliated with Ookla or speedtest.net.
 
 ## Status
 
-LibreSpeed HTTP backend works: ping/jitter, download, and upload via the
-`linkprobe` CLI. Point `--server` at a LibreSpeed (or compatible) base URL.
+LibreSpeed and iperf3 backend work via the `linkprobe` CLI. 
+iperf3 requires the `iperf3` binary on `PATH`.
 
-Still planned: iperf3, server discovery, MQTT/Prometheus exporters.
+Still planned: server discovery, MQTT/Prometheus exporters.
 
 ## Usage
 
 ```bash
 cargo run -p linkprobe -- --server https://example-librespeed/
 cargo run -p linkprobe -- --server https://example-librespeed/ --json
+cargo run -p linkprobe -- --backend iperf3 --server 192.0.2.1
+cargo run -p linkprobe -- --backend iperf3 --server 192.0.2.1 --port 5201 --duration 5 --json
 ```
 
 Optional path overrides (defaults match LibreSpeed):

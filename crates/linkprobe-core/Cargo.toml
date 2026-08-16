@@ -11,7 +11,8 @@ description = "Protocol-agnostic network link measurement engine"
 serde = { workspace = true }
 thiserror = { workspace = true }
 reqwest = { workspace = true }
-url = { workspace = true } 
+url = { workspace = true }
+serde_json = { workspace = true }
 
 [dev-dependencies]
 mockito = "1.7"

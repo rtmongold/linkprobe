@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 - GitHub Actions CI (fmt, clippy, test on ubuntu/stable).
+- iperf3 backend (spanws system `iperf3 -J`) and CLI `--backend` / `--port` / `--duration`.
 
 ### Changed
 - README: accurate status, usage examples; fix typo.
