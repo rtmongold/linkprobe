@@ -8,11 +8,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## Unreleased
 
 ### Added
-- LibreSpeed HTTP backend in `linkprobe-core` (ping/jitter, download, upload)
-  with blocking reqwest and mockito unit tests.
-- `linkprobe` CLI: `--server <URL>`, optional path overrides, human output and `--json`.
+- GitHub Actions CI (fmt, clippy, test on ubuntu/stable).
+
+### Changed
+- README: accurate status, usage examples; fix typo.
 
 ## [0.1.0] - 2026-08-15
 
 ### Added
 - Initial workspace scaffold: `linkprobe-core` library and `linkprobe` CLI stub.
+- LibreSpeed HTTP backend in `linkprobe-core` (ping/jitter, download, upload)
+  with blocking reqwest and mockito unit tests.
+- `linkprobe` CLI: `--server <URL>`, optional path overrides, human output and `--json`.
