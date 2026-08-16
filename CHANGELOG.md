@@ -9,10 +9,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 - GitHub Actions CI (fmt, clippy, test on ubuntu/stable).
-- iperf3 backend (spanws system `iperf3 -J`) and CLI `--backend` / `--port` / `--duration`.
+- iperf3 backend (spawns system `iperf3 -J`) and CLI `--backend` / `--port` / `--duration`.
+- Root `.gitignore` (ignore `/target`) and `rust-toolchain.toml` at repo root.
+- LibreSpeed server discovery: `--list`, `--server-id`, `--servers-url`, auto-pick when `--server` is omitted.
 
 ### Changed
-- README: accurate status, usage examples; fix typo.
+- README: document LibreSpeed discovery and iperf3 usage.
 
 ## [0.1.0] - 2026-08-15
 

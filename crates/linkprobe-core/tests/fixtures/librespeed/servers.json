@@ -1,0 +1,20 @@
+[
+    {
+        "id": 52,
+        "name": "New York, United States (Clouvider)",
+        "server": "https://nyc.speedtest.clouvider.net/backend",
+        "dlURL": "garbage.php",
+        "ulURL": "empty.php",
+        "pingURL": "empty.php",
+        "sponsorName": "Clouvider"
+    },
+    {
+        "id": 85,
+        "name": "Prague, Czech Republic (Turris)",
+        "server": "https://librespeed.turris.cz",
+        "dlURL": "backend/garbage.php",
+        "ulURL": "backend/empty.php",
+        "pingURL": "backend/empty.php",
+        "sponsorName": "Turris"
+    }
+]
