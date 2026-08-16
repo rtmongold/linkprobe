@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Throughput {
@@ -20,9 +19,9 @@ impl Throughput {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Measurement {
     /// Round-trip latency in milliseconds.
-    pub latency: Option<Duration>,
+    pub latency_ms: Option<f64>,
     /// Jitter in milliseconds.
-    pub jitter: Option<Duration>,
+    pub jitter_ms: Option<f64>,
     pub download: Option<Throughput>,
     pub upload: Option<Throughput>,
     /// Fraction in [0.0, 1.0] when known.

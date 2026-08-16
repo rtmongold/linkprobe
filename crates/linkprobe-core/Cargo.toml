@@ -10,3 +10,8 @@ description = "Protocol-agnostic network link measurement engine"
 [dependencies]
 serde = { workspace = true }
 thiserror = { workspace = true }
+reqwest = { workspace = true }
+url = { workspace = true } 
+
+[dev-dependencies]
+mockito = "1.7"

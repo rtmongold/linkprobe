@@ -7,4 +7,10 @@ pub enum Error {
 
     #[error("not implemented")]
     NotImplemented,
+
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+
+    #[error(transparent)]
+    Url(#[from] url::ParseError),
 }
