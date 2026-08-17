@@ -12,9 +12,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - iperf3 backend (spawns system `iperf3 -J`) and CLI `--backend` / `--port` / `--duration`.
 - Root `.gitignore` (ignore `/target`) and `rust-toolchain.toml` at repo root.
 - LibreSpeed server discovery: `--list`, `--server-id`, `--servers-url`, auto-pick when `--server` is omitted.
+- `RunResult` in `linkprobe-core` plus OpenMetrics formatter.
+- CLI `--prometheus-text [PATH]` (stdout if omitted or `-`).
+- MQTT publish: `--mqtt-url`, `--mqtt-topic`, `--mqtt-username`, `--mqtt-password`.
 
 ### Changed
 - README: document LibreSpeed discovery and iperf3 usage.
+- README: document Prometheus text and MQTT exporters.
 
 ## [0.1.0] - 2026-08-15
 

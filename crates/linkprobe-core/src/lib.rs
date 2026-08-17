@@ -2,7 +2,9 @@
 
 mod discovery;
 mod error;
+pub mod export;
 mod measurement;
+mod result;
 mod server;
 
 pub mod backends;
@@ -12,7 +14,9 @@ pub use discovery::{
     pick_lowest_latency, server_by_id,
 };
 pub use error::Error;
+pub use export::format_openmetrics;
 pub use measurement::{Measurement, Throughput};
+pub use result::RunResult;
 pub use server::Server;
 
 /// Runs latency / download / upload (and optional loss) against a server.
