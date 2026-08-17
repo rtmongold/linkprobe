@@ -44,7 +44,9 @@ Optional path overrides (defaults match LibreSpeed):
 - `--dl-path` (default: `backend/garbage.php`)
 - `--ul-path` (default: `backend/empty.php`)
 - `--ping-path` (default: `backend/empty.php`)
+
 Optional: `--servers-url` to point at a custom LibreSpeed servers JSON.
+
 MQTT extras: `--mqtt-username`, `mqtt-password`
 
 ## Crates
