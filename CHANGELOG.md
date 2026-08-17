@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `RunResult` in `linkprobe-core` plus OpenMetrics formatter.
 - CLI `--prometheus-text [PATH]` (stdout if omitted or `-`).
 - MQTT publish: `--mqtt-url`, `--mqtt-topic`, `--mqtt-username`, `--mqtt-password`.
+- Phase-aware errors(`download failed: ...`) and up to 3 retries on flaky LibreSpeed HTTP bodies.
+- CLI prints `error: ...` to stderr instead of a Debug dump.
 
 ### Changed
 - README: document LibreSpeed discovery and iperf3 usage.

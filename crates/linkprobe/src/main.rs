@@ -136,7 +136,14 @@ fn write_prometheus_text(path: &str, text: &str) -> Result<(), Error> {
     Ok(())
 }
 
-fn main() -> Result<(), Error> {
+fn main() {
+    if let Err(e) = run() {
+        eprintln!("error: {e}");
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<(), Error> {
     let cli = Cli::parse();
 
     if cli.list {
