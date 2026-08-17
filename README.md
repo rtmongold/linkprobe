@@ -31,6 +31,10 @@ cargo run -p linkprobe --                 # auto-pick lowest latency
 cargo run -p linkprobe -- --backend iperf3 --server 192.0.2.1
 cargo run -p linkprobe -- --backend iperf3 --server 192.0.2.1 --port 5201 --duration 5 --json
 
+# iperf3 UDP (jitter + packet loss; -b default 10M)
+cargo run -p linkprobe -- --backend iperf3 --server 192.0.2.1 --udp
+cargo run -p linkprobe -- --backend iperf3 --server 192.0.2.1 --udp --bandwidth 50M --duration 5
+
 # Prometheus OpenMetrics (stdout, or a file for node_exporter textfile collector)
 cargo run -p linkprobe -- --server-id 52 --prometheus-text -
 cargo run -p linkprobe -- --server-id 52 --prometheus-text /var/lib/node_exporter/textfile_collector/linkprobe.prom

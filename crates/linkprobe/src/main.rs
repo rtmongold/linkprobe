@@ -49,6 +49,14 @@ struct Cli {
     #[arg(long, default_value_t = 5)]
     duration: u64,
 
+    /// iperf3 UDP mode (-u -b). TCP is the default.
+    #[arg(long)]
+    udp: bool,
+
+    /// iperf3 UDP target bitrate (-b). Default: 10M.
+    #[arg(long, default_value = "10M")]
+    bandwidth: String,
+
     /// Emit machine-readable JSON.
     #[arg(long)]
     json: bool,
@@ -146,6 +154,12 @@ fn main() {
 fn run() -> Result<(), Error> {
     let cli = Cli::parse();
 
+    if cli.udp && !matches!(cli.backend, Backend::Iperf3) {
+        return Err(Error::Message(
+            "--udp is only supported for --backend iperf3".into(),
+        ));
+    }
+
     if cli.list {
         if !matches!(cli.backend, Backend::LibreSpeed) {
             return Err(Error::Message(
@@ -172,7 +186,10 @@ fn run() -> Result<(), Error> {
                 Error::Message("--server is required for --backend iperf3".into())
             })?;
             let server = Server::iperf3(host, cli.port);
-            let engine = Iperf3Engine::new().with_duration_secs(cli.duration);
+            let engine = Iperf3Engine::new()
+                .with_duration_secs(cli.duration)
+                .with_udp(cli.udp)
+                .with_bandwidth(cli.bandwidth);
             let measurement = engine.measure(&server)?;
             RunResult::new("iperf3", server, measurement)
         }
@@ -193,6 +210,9 @@ fn run() -> Result<(), Error> {
             }
             if let Some(ms) = result.measurement.jitter_ms {
                 println!("Jitter:    {ms:.1} ms");
+            }
+            if let Some(loss) = result.measurement.packet_loss {
+                println!("Packet loss: {:.1}%", loss * 100.0);
             }
             if let Some(dl) = result.measurement.download.clone() {
                 println!("Download:  {:.1} Mbps", dl.mbps());
