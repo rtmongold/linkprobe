@@ -1,0 +1,10 @@
+{
+    "end": {
+        "sum_sent": { "bits_per_second": 10000000.0 },
+        "sum_received": {
+            "bits_per_second": 9800000.0,
+            "jitter_ms": 1.5,
+            "lost_percent": 2.0
+        }
+    }
+}

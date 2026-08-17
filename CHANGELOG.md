@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - MQTT publish: `--mqtt-url`, `--mqtt-topic`, `--mqtt-username`, `--mqtt-password`.
 - Phase-aware errors(`download failed: ...`) and up to 3 retries on flaky LibreSpeed HTTP bodies.
 - CLI prints `error: ...` to stderr instead of a Debug dump.
+- iperf3 UDP mode: CLI `--udp` / `--bandwidth` (default 10M); fills jitter and packet loss.
 
 ### Changed
 - README: document LibreSpeed discovery and iperf3 usage.
