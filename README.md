@@ -49,6 +49,9 @@ Optional: `--servers-url` to point at a custom LibreSpeed servers JSON.
 
 MQTT extras: `--mqtt-username`, `mqtt-password`
 
+Public LbreSpeed hosts can drop connections: linkprobe retries a few times.  If it still
+fails, try `--list` and another `--server-id`.
+
 ## Crates
 
 - `linkprobe-core` - measurement types, LibreSpeed/iperf3 backends, discovery, OpenMetrics

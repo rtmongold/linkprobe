@@ -11,10 +11,10 @@ pub fn publish_json(
     password: Option<&str>,
     payload: &str,
 ) -> Result<(), Error> {
-    let parsed = Url::parse(broker_url).map_err(|e| Error::Message(format!("mqtt url: {e}")))?;
+    let parsed = Url::parse(broker_url).map_err(|e| Error::Message(format!("url: {e}")))?;
     let host = parsed
         .host_str()
-        .ok_or_else(|| Error::Message("mqtt url missing host".into()))?;
+        .ok_or_else(|| Error::Message("url missing host".into()))?;
     let port = parsed.port().unwrap_or(1883);
 
     let mut opts = MqttOptions::new(format!("linkprobe-{}", std::process::id()), host, port);
@@ -26,18 +26,26 @@ pub fn publish_json(
     let (client, mut connection) = Client::new(opts, 10);
     client
         .publish(topic, QoS::AtLeastOnce, false, payload.as_bytes())
-        .map_err(|e| Error::Message(format!("mqtt publish: {e}")))?;
+        .map_err(|e| Error::Mqtt(format!("publish: {e}")))?;
 
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
         if Instant::now() > deadline {
-            return Err(Error::Message("mqtt publish timed out".into()));
+            return Err(Error::Mqtt("publish timed out".into()));
         }
         match connection.recv() {
             Ok(Ok(Event::Incoming(Incoming::PubAck(_)))) => return Ok(()),
             Ok(Ok(_)) => continue,
-            Ok(Err(e)) => return Err(Error::Message(format!("mqtt: {e}"))),
-            Err(e) => return Err(Error::Message(format!("mqtt: {e:?}"))),
+            Ok(Err(e)) => {
+                return Err(Error::Mqtt(format!(
+                    "cannot connect to {host}:{port} ({e})"
+                )));
+            }
+            Err(e) => {
+                return Err(Error::Mqtt(format!(
+                    "cannot connect to {host}:{port} ({e:?})"
+                )));
+            }
         }
     }
 }

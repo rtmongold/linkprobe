@@ -1,4 +1,3 @@
-use std::io::Read;
 use std::time::Instant;
 
 use reqwest::blocking::{Body, Client};
@@ -11,6 +10,7 @@ use crate::{Error, MeasurementEngine};
 const PING_SAMPLES: usize = 10;
 const DOWNLOAD_CHUNK_SIZE: u32 = 4; // 4 MiB from garbage.php
 const UPLOAD_BYTES: usize = 2 * 1024 * 1024;
+const HTTP_ATTEMPTS: usize = 3;
 
 #[derive(Debug, Clone)]
 pub struct LibreSpeedEngine {
@@ -35,14 +35,36 @@ impl LibreSpeedEngine {
         Ok(Url::parse(&base)?.join(path)?)
     }
 
+    fn is_retryable(err: &reqwest::Error) -> bool {
+        err.is_timeout() || err.is_connect() || err.is_decode() || err.is_body()
+    }
+
+    fn with_retries<T>(
+        phase: &'static str,
+        mut op: impl FnMut() -> Result<T, reqwest::Error>,
+    ) -> Result<T, Error> {
+        let mut last = None;
+        for _ in 0..HTTP_ATTEMPTS {
+            match op() {
+                Ok(v) => return Ok(v),
+                Err(e) if Self::is_retryable(&e) => last = Some(e),
+                Err(e) => return Err(Error::from_reqwest(phase, e)),
+            }
+        }
+        Err(Error::from_reqwest(phase, last.expect("retry loop")))
+    }
+
     fn ping_jitter(&self, server: &Server) -> Result<(f64, f64), Error> {
         let url = Self::join(&server.base_url, &server.ping_path)?;
         let mut samples_ms = Vec::with_capacity(PING_SAMPLES);
 
         for _ in 0..PING_SAMPLES {
             let start = Instant::now();
-            let resp = self.client.get(url.clone()).send()?;
-            let _ = resp.bytes()?;
+            Self::with_retries("ping", || {
+                let resp = self.client.get(url.clone()).send()?.error_for_status()?;
+                let _ = resp.bytes()?;
+                Ok(())
+            })?;
             samples_ms.push(start.elapsed().as_secs_f64() * 1000.0);
         }
 
@@ -64,30 +86,32 @@ impl LibreSpeedEngine {
         url.query_pairs_mut()
             .append_pair("ckSize", &DOWNLOAD_CHUNK_SIZE.to_string());
 
-        let start = Instant::now();
-        let resp = self.client.get(url).send()?;
-        let bytes = resp.bytes()?;
-        let secs = start.elapsed().as_secs_f64().max(1e-6);
-        Ok(Throughput::from_bps((bytes.len() as f64) * 8.0 / secs))
+        let (n, secs) = Self::with_retries("download", || {
+            let start = Instant::now();
+            let resp = self.client.get(url.clone()).send()?.error_for_status()?;
+            let n = resp.bytes()?.len();
+            Ok((n, start.elapsed().as_secs_f64().max(1e-6)))
+        })?;
+        Ok(Throughput::from_bps((n as f64) * 8.0 / secs))
     }
 
     fn upload(&self, server: &Server) -> Result<Throughput, Error> {
         let url = Self::join(&server.base_url, &server.ul_path)?;
-        let payload = vec![0_u8; UPLOAD_BYTES];
-        let len = payload.len() as f64;
+        let len = UPLOAD_BYTES as f64;
 
-        let start = Instant::now();
-        let resp = self
-            .client
-            .post(url)
-            .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
-            .body(Body::from(payload))
-            .send()?;
-        // Drain response so the request fully completes.
-        let mut sink = std::io::sink();
-        std::io::copy(&mut resp.take(64 * 1024), &mut sink)
-            .map_err(|e| Error::Message(format!("failed reading upload response: {e}")))?;
-        let secs = start.elapsed().as_secs_f64().max(1e-6);
+        let secs = Self::with_retries("upload", || {
+            let payload = vec![0_u8; UPLOAD_BYTES];
+            let start = Instant::now();
+            let resp = self
+                .client
+                .post(url.clone())
+                .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
+                .body(Body::from(payload))
+                .send()?
+                .error_for_status()?;
+            let _ = resp.bytes()?.len();
+            Ok(start.elapsed().as_secs_f64().max(1e-6))
+        })?;
         Ok(Throughput::from_bps(len * 8.0 / secs))
     }
 }

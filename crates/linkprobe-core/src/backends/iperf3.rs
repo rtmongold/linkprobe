@@ -53,20 +53,18 @@ impl Iperf3Engine {
 
         let output = cmd.output().map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
-                Error::Message(
-                    "iperf3 not found on PATH (install iperf3 to use --backend iperf3)".into(),
-                )
+                Error::Iperf3Missing
             } else {
-                Error::Io(e)
+                Error::probe("iperf3", e)
             }
         })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::Message(format!(
-                "iperf3 exited {}: {stderr}",
-                output.status
-            )));
+            return Err(Error::probe(
+                "iperf3",
+                Error::Message(format!("exited {}: {stderr}", output.status)),
+            ));
         }
 
         Ok(serde_json::from_slice(&output.stdout)?)
