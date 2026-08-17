@@ -1,11 +1,12 @@
+mod mqtt;
+
 use clap::{Parser, ValueEnum};
 use linkprobe_core::backends::{Iperf3Engine, LibreSpeedEngine};
 use linkprobe_core::{
-    DEFAULT_LIBRESPEED_SERVERS_URL, Error, Measurement, MeasurementEngine, Server,
-    fetch_librespeed_servers, pick_lowest_latency, server_by_id,
+    DEFAULT_LIBRESPEED_SERVERS_URL, Error, MeasurementEngine, RunResult, Server,
+    fetch_librespeed_servers, format_openmetrics, pick_lowest_latency, server_by_id,
 };
 use reqwest::blocking::Client;
-use serde::Serialize;
 
 #[derive(Debug, Clone, ValueEnum)]
 enum Backend {
@@ -52,6 +53,26 @@ struct Cli {
     #[arg(long)]
     json: bool,
 
+    /// Write OpenMetrics text. Omit PATH or use `-` for stdout.
+    #[arg(long, value_name = "PATH", num_args = 0..=1, default_missing_value = "-")]
+    prometheus_text: Option<String>,
+
+    /// MQTT broker URL, e.g. mqtt://127.0.0.1:1883
+    #[arg(long)]
+    mqtt_url: Option<String>,
+
+    /// MQTT topic (default: linkprobe/result).
+    #[arg(long, default_value = "linkprobe/result")]
+    mqtt_topic: String,
+
+    /// MQTT username (optional).
+    #[arg(long)]
+    mqtt_username: Option<String>,
+
+    ///MQTT password (optional).
+    #[arg(long)]
+    mqtt_password: Option<String>,
+
     /// Override download path (default: backend/garbage.php).
     #[arg(long)]
     dl_path: Option<String>,
@@ -63,13 +84,6 @@ struct Cli {
     /// Override ping path (default: backend/empty.php).
     #[arg(long)]
     ping_path: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-struct RunResult<'a> {
-    backend: &'a str,
-    server: &'a Server,
-    measurement: &'a Measurement,
 }
 
 fn list_client() -> Result<Client, Error> {
@@ -111,6 +125,17 @@ fn resolve_librespeed(cli: &Cli) -> Result<Server, Error> {
     Ok(server)
 }
 
+fn write_prometheus_text(path: &str, text: &str) -> Result<(), Error> {
+    if path == "-" {
+        print!("{text}");
+        return Ok(());
+    }
+    let tmp = format!("{path}.tmp");
+    std::fs::write(&tmp, text)?;
+    std::fs::rename(&tmp, path)?;
+    Ok(())
+}
+
 fn main() -> Result<(), Error> {
     let cli = Cli::parse();
 
@@ -128,12 +153,12 @@ fn main() -> Result<(), Error> {
         return Ok(());
     }
 
-    let (backend_name, server, measurement) = match cli.backend {
+    let result = match cli.backend {
         Backend::LibreSpeed => {
             let server = resolve_librespeed(&cli)?;
             let engine = LibreSpeedEngine::new()?;
             let measurement = engine.measure(&server)?;
-            ("librespeed", server, measurement)
+            RunResult::new("librespeed", server, measurement)
         }
         Backend::Iperf3 => {
             let host = cli.server.ok_or_else(|| {
@@ -142,35 +167,49 @@ fn main() -> Result<(), Error> {
             let server = Server::iperf3(host, cli.port);
             let engine = Iperf3Engine::new().with_duration_secs(cli.duration);
             let measurement = engine.measure(&server)?;
-            ("iperf3", server, measurement)
+            RunResult::new("iperf3", server, measurement)
         }
     };
 
-    if cli.json {
-        let out = RunResult {
-            backend: backend_name,
-            server: &server,
-            measurement: &measurement,
-        };
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&out).map_err(|e| Error::Message(e.to_string()))?
-        );
-    } else {
-        println!("Backend:   {}", backend_name);
-        println!("Server:    {}", server.name);
-        if let Some(ms) = measurement.latency_ms {
-            println!("Latency:   {ms:.1} ms");
+    let prom_stdout = cli.prometheus_text.as_deref() == Some("-");
+    if !prom_stdout {
+        if cli.json {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&result).map_err(|e| Error::Message(e.to_string()))?
+            );
+        } else {
+            println!("Backend:   {}", result.backend);
+            println!("Server:    {}", result.server.name);
+            if let Some(ms) = result.measurement.latency_ms {
+                println!("Latency:   {ms:.1} ms");
+            }
+            if let Some(ms) = result.measurement.jitter_ms {
+                println!("Jitter:    {ms:.1} ms");
+            }
+            if let Some(dl) = result.measurement.download.clone() {
+                println!("Download:  {:.1} Mbps", dl.mbps());
+            }
+            if let Some(ul) = result.measurement.upload.clone() {
+                println!("Upload:    {:.1} Mbps", ul.mbps());
+            }
         }
-        if let Some(ms) = measurement.jitter_ms {
-            println!("Jitter:    {ms:.1} ms");
-        }
-        if let Some(dl) = measurement.download {
-            println!("Download:  {:.1} Mbps", dl.mbps());
-        }
-        if let Some(ul) = measurement.upload {
-            println!("Upload:    {:.1} Mbps", ul.mbps());
-        }
+    }
+
+    if let Some(path) = &cli.prometheus_text {
+        let text = format_openmetrics(&result);
+        write_prometheus_text(path, &text)?;
+    }
+
+    if let Some(url) = &cli.mqtt_url {
+        let payload = serde_json::to_string(&result).map_err(|e| Error::Message(e.to_string()))?;
+        mqtt::publish_json(
+            url,
+            &cli.mqtt_topic,
+            cli.mqtt_username.as_deref(),
+            cli.mqtt_password.as_deref(),
+            &payload,
+        )?;
     }
     Ok(())
 }
