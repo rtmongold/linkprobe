@@ -11,7 +11,7 @@ LibreSpeed and iperf3 backend work via the `linkprobe` CLI.
 
 - LibreSpeed: measure a URL, pick from the public server list, or auto-select
   by ping.
-- iperf3: requires the `iperf3` binary on `PATH`.
+- iperf3: requires `iperf3` on `PATH` ; optional `--list` / `--server-id` from the public server JSON.
 - After a run: human or `--json` stdout, optional MQTT publish, optional
   OpenMetrics file/stdout.
 
@@ -35,6 +35,10 @@ cargo run -p linkprobe -- --backend iperf3 --server 192.0.2.1 --port 5201 --dura
 cargo run -p linkprobe -- --backend iperf3 --server 192.0.2.1 --udp
 cargo run -p linkprobe -- --backend iperf3 --server 192.0.2.1 --udp --bandwidth 50M --duration 5
 
+# iperf3 - discovery
+cargo run -p linkprobe -- --backend iperf3 --list
+cargo run -p linkprobe -- --backend iperf3 --server-id 1 --duration 5
+
 # Prometheus OpenMetrics (stdout, or a file for node_exporter textfile collector)
 cargo run -p linkprobe -- --server-id 52 --prometheus-text -
 cargo run -p linkprobe -- --server-id 52 --prometheus-text /var/lib/node_exporter/textfile_collector/linkprobe.prom
@@ -49,7 +53,7 @@ Optional path overrides (defaults match LibreSpeed):
 - `--ul-path` (default: `backend/empty.php`)
 - `--ping-path` (default: `backend/empty.php`)
 
-Optional: `--servers-url` to point at a custom LibreSpeed servers JSON.
+Optional: `--servers-url` for a custom server list (LibreSpeed or iperf3 JSON, depending on `--backend`).
 
 MQTT extras: `--mqtt-username`, `mqtt-password`
 

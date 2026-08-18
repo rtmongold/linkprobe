@@ -1,0 +1,22 @@
+[
+    {
+        "IP/HOST": "41.110.39.130",
+        "PORT": "5201",
+        "OPTIONS": "-R, -u",
+        "GB/S": "10",
+        "CONTINENT": "Africa",
+        "COUNTRY": "DZ",
+        "SITE": "Algiers",
+        "PROVIDER": "DATAPACKET"
+    },
+    {
+        "IP/HOST": "105.235.237.2",
+        "PORT": "5201-5203",
+        "OPTIONS": "-R, -u",
+        "GB/S": "",
+        "CONTINENT": "Africa",
+        "COUNTRY": "GQ",
+        "SITE": "Bata",
+        "PROVIDER": "Guineanet"
+    }
+]
