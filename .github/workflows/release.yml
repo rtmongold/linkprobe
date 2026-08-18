@@ -1,0 +1,61 @@
+name: Release binaries
+
+on:
+  push:
+    tags:
+      - "v*"
+    workflow_dispatch:
+      inputs:
+        tag:
+          description: Existing release tag to attach binaries to (e.g. v0.2.0)
+          required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+      runs-on: ${{ matrix.os }}
+      env:
+        TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release -p linkprobe
+
+      - name: Package
+        shell: bash
+        run: |
+          set -euo pipefail
+          host="$(rustc -vV | awk '/^host:/ { print $2 }')"
+          mkdir -p dist artifacts
+          if [[ -f target/release/linkprobe.exe ]]; then
+            cp target/release/linkprobe.exe dist/linkprobe.exe
+          else
+            cp target/release/linkprobe dist/linkprobe
+          fi
+          cp README.md LICENSE-MIT LICENSE-APACHE dist/
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            (cd dist && tar.exe -a -cf "../artifacts/linkprobe-${TAG}-${host}.zip" *)
+          else
+            tar -C dist -czf "artifacts/linkprobe-${TAG}-${host}.tar.gz" .
+          fi
+          ls -l artifacts
+
+      - name: Upload to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$TAG"
+          gh release upload "$TAG" artifacts/* --clobber

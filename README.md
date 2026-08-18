@@ -31,6 +31,10 @@ iperf3 install:
 - macOS: `brew install iperf3`
 - Windows: [iperf3 Windows builds](https://github.com/esnet/iperf) or `winget` / `choco`; put `iperf3` on `PATH`
 
+Pre-built binaries are attached to [GitHub Releases](https://github.com/rtmongold/linkprobe/releases)
+(Linux x86_64, macOS Apple Silicon, Windows x86_64). The iperf3 backend still needs
+`iperf3` on `PATH`; LibreSpeed does not.
+
 ## Usage
 
 ```bash
