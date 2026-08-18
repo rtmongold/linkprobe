@@ -54,6 +54,7 @@ jobs:
           ls -l artifacts
 
       - name: Upload to GitHub Release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
