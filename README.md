@@ -75,7 +75,7 @@ Optional path overrides (defaults match LibreSpeed):
 
 Optional: `--servers-url` for a custom server list (LibreSpeed or iperf3 JSON, depending on `--backend`).
 
-MQTT extras: `--mqtt-username`, `mqtt-password`
+MQTT extras: `--mqtt-username`, `--mqtt-password`
 
 Public LibreSpeed hosts can drop connections: linkprobe retries each phase up to three times,
 then auto-pick and `--server-id` try up to two more list servers (by ping). Explicit `--server`
