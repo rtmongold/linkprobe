@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - iperf3 UDP mode: CLI `--udp` / `--bandwidth` (default 10M); fills jitter and packet loss.
 - iperf3 server discovery: `--list`, `--server-id`, and `--servers-url` with iperf3 default when `--backend iperf3`.
 - Prometheus scrape daemon: `--listen ADDR` and `--interval SECS`; serves GET `/metrics` with OpenMetrics text.
+- LibreSpeed auto-failover: after per-host retries, try up to two more list servers by ping (`--server-id` and
+  auto-pick; explicit `--server` is unchanged).
 
 ### Changed
 - README: document LibreSpeed discovery and iperf3 usage.

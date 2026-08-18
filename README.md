@@ -9,9 +9,9 @@ Not affiliated with Ookla or speedtest.net.
 
 LibreSpeed and iperf3 backend work via the `linkprobe` CLI. 
 
-- LibreSpeed: measure a URL, pick from the public server list, or auto-select
-  by ping.
-- iperf3: requires `iperf3` on `PATH` ; optional `--list` / `--server-id` from the public server JSON.
+- LibreSpeed: measure a URL, pick from the public list, or auto-select by ping.
+  `--server-id` and auto-pick try up to two more hosts if the first still fails after HTTP retries.
+- iperf3: requires `iperf3` on `PATH`; optional `--list` / `--server-id` from the public server JSON.
 - After a run: human or `--json` stdout, optional MQTT publish, optional
   OpenMetrics file/stdout or HTTP scrape via `--listen`.
 
@@ -25,7 +25,7 @@ cargo run -p linkprobe -- --server https://example-librespeed/ --json
 # LibreSpeed - discovery
 cargo run -p linkprobe -- --list
 cargo run -p linkprobe -- --server-id 52
-cargo run -p linkprobe --                 # auto-pick lowest latency
+cargo run -p linkprobe --                 # auto-pick; failover if first host flakes
 
 # iperf3
 cargo run -p linkprobe -- --backend iperf3 --server 192.0.2.1
@@ -61,13 +61,15 @@ Optional: `--servers-url` for a custom server list (LibreSpeed or iperf3 JSON, d
 
 MQTT extras: `--mqtt-username`, `mqtt-password`
 
-Public LbreSpeed hosts can drop connections: linkprobe retries a few times.  If it still
-fails, try `--list` and another `--server-id`.
+Public LibreSpeed hosts can drop connections: linkprobe retries each phase up to three times,
+then auto-pick and `--server-id` try up to two more list servers (by ping). Explicit `--server`
+URLs are single-host only. On rotation you will see `linkprobe: <name> failed, trying next server`
+on stderr.
 
 ## Crates
 
 - `linkprobe-core` - measurement types, LibreSpeed/iperf3 backends, discovery, OpenMetrics
-- `linkprobe` - CLI, MQTT publish
+- `linkprobe` - CLI, MQTT, scrape HTTP
 
 ## License
 

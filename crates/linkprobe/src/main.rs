@@ -4,9 +4,9 @@ mod mqtt;
 use clap::{Parser, ValueEnum};
 use linkprobe_core::backends::{Iperf3Engine, LibreSpeedEngine};
 use linkprobe_core::{
-    DEFAULT_LIBRESPEED_SERVERS_URL, Error, MeasurementEngine, RunResult, Server,
-    fetch_iperf3_servers, fetch_librespeed_servers, format_openmetrics, format_openmetrics_failed,
-    pick_lowest_latency, server_by_id, servers_list_url,
+    DEFAULT_LIBRESPEED_SERVERS_URL, Error, FAILOVER_EXTRA, MeasurementEngine, RunResult, Server,
+    failover_candidates, fetch_iperf3_servers, fetch_librespeed_servers, format_openmetrics,
+    format_openmetrics_failed, rank_by_latency, server_by_id, servers_list_url,
 };
 use reqwest::blocking::Client;
 
@@ -111,7 +111,7 @@ fn list_client() -> Result<Client, Error> {
         .build()?)
 }
 
-fn resolve_librespeed(cli: &Cli) -> Result<Server, Error> {
+fn resolve_librespeed_candidates(cli: &Cli) -> Result<Vec<Server>, Error> {
     if cli.server.is_some() && cli.server_id.is_some() {
         return Err(Error::Message(
             "use only one of --server or --server-id".into(),
@@ -129,18 +129,23 @@ fn resolve_librespeed(cli: &Cli) -> Result<Server, Error> {
         if let Some(p) = &cli.ping_path {
             server.ping_path = p.clone();
         }
-        return Ok(server);
+        return Ok(vec![server]);
     }
 
     let client = list_client()?;
     let servers = fetch_librespeed_servers(&client, &cli.servers_url)?;
+    let ranked = rank_by_latency(&client, &servers);
 
     if let Some(id) = cli.server_id {
-        return server_by_id(&servers, id);
+        let preferred = server_by_id(&servers, id)?;
+        return Ok(failover_candidates(&ranked, &preferred, FAILOVER_EXTRA));
     }
 
-    let (server, _ms) = pick_lowest_latency(&client, &servers)?;
-    Ok(server)
+    let preferred = ranked
+        .first()
+        .map(|(s, _)| s.clone())
+        .ok_or_else(|| Error::Message("no LibreSpeed servers responded to ping".into()))?;
+    Ok(failover_candidates(&ranked, &preferred, FAILOVER_EXTRA))
 }
 
 fn resolve_iperf3(cli: &Cli) -> Result<Server, Error> {
@@ -188,9 +193,9 @@ fn main() {
 fn run_probe(cli: &Cli) -> Result<RunResult, Error> {
     match cli.backend {
         Backend::LibreSpeed => {
-            let server = resolve_librespeed(cli)?;
+            let candidates = resolve_librespeed_candidates(cli)?;
             let engine = LibreSpeedEngine::new()?;
-            let measurement = engine.measure(&server)?;
+            let (server, measurement) = engine.measure_with_failover(&candidates)?;
             Ok(RunResult::new("librespeed", server, measurement))
         }
         Backend::Iperf3 => {
