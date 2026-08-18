@@ -4,11 +4,11 @@ on:
   push:
     tags:
       - "v*"
-    workflow_dispatch:
-      inputs:
-        tag:
-          description: Existing release tag to attach binaries to (e.g. v0.2.0)
-          required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to attach binaries to (e.g. v0.2.0)
+        required: true
 
 permissions:
   contents: write
@@ -19,9 +19,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-      runs-on: ${{ matrix.os }}
-      env:
-        TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    runs-on: ${{ matrix.os }}
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v7
         with:
