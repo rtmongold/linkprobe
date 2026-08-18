@@ -212,7 +212,10 @@ fn run() -> Result<(), Error> {
         }
         Backend::Iperf3 => {
             let server = resolve_iperf3(&cli)?;
-            let engine = Iperf3Engine::new().with_duration_secs(cli.duration);
+            let engine = Iperf3Engine::new()
+                .with_duration_secs(cli.duration)
+                .with_udp(cli.udp)
+                .with_bandwidth(cli.bandwidth);
             let measurement = engine.measure(&server)?;
             RunResult::new("iperf3", server, measurement)
         }
