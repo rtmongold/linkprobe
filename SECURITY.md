@@ -6,8 +6,8 @@ Security fixes are applied to the latest release on `main`. Older tags may not r
 
 | Version | Supported |
 | ------- | --------- |
-| 0.1.0 latest on `main` | yes |
-| older tags | no |
+| 0.2.0 | yes |
+| 0.1.0 and older | no |
 
 ## Reporting a vulnerability
 
