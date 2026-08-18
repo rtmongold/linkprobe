@@ -47,7 +47,7 @@ jobs:
           fi
           cp README.md LICENSE-MIT LICENSE-APACHE dist/
           if [[ "${RUNNER_OS}" == "Windows" ]]; then
-            (cd dist && tar.exe -a -cf "../artifacts/linkprobe-${TAG}-${host}.zip" *)
+            python -c "import pathlib, zipfile; p=pathlib.Path('dist'); z=zipfile.ZipFile('artifacts/linkprobe-${TAG}-${host}.zip','w',zipfile.ZIP_DEFLATED); [z.write(f, f.name) for f in p.iterdir()]; z.close()"
           else
             tar -C dist -czf "artifacts/linkprobe-${TAG}-${host}.tar.gz" .
           fi
