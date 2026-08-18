@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Prometheus scrape daemon: `--listen ADDR` and `--interval SECS`; serves GET `/metrics` with OpenMetrics text.
 - LibreSpeed auto-failover: after per-host retries, try up to two more list servers by ping (`--server-id` and
   auto-pick; explicit `--server` is unchanged).
+- CONTRIBUTING.md, SECURITY.md, and Dependabot (weekly Cargo and GitHub Actions).
 
 ### Changed
 - README: document LibreSpeed discovery and iperf3 usage.
