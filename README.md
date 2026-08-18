@@ -15,6 +15,22 @@ LibreSpeed and iperf3 backend work via the `linkprobe` CLI.
 - After a run: human or `--json` stdout, optional MQTT publish, optional
   OpenMetrics file/stdout or HTTP scrape via `--listen`.
 
+## Requirements
+
+Runs on Linux, macOS, and Windows. CI builds and tests all three.
+
+- Rust stable (see `rust-toolchain.toml`)
+- LibreSpeed: outbound HTTPS
+- iperf3 backend: `iperf3` on `PATH` (`iperf3.exe` on Windows)
+- MQTT: a reachable broker
+- Prometheus scrape: `--listen` bind address (prefer `127.0.0.1`)
+
+iperf3 install:
+
+- Linux: distro package (`iperf3`)
+- macOS: `brew install iperf3`
+- Windows: [iperf3 Windows builds](https://github.com/esnet/iperf) or `winget` / `choco`; put `iperf3` on `PATH`
+
 ## Usage
 
 ```bash
