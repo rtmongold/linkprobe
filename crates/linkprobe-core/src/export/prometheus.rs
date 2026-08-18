@@ -55,6 +55,24 @@ pub fn format_openmetrics(result: &RunResult) -> String {
     out
 }
 
+pub fn format_openmetrics_failed(backend: &str, server: &str, err: &str) -> String {
+    let backend = escape_label(backend);
+    let server = escape_label(server);
+    let err = escape_label(err);
+    let labels = format!("backend=\"{backend}\", server=\"{server}\"");
+    let mut out = String::new();
+    out.push_str("# HELP linkprobe_ok 1 if the last probe succeeded.\n");
+    out.push_str("# TYPE linkprobe_ok gauge\n");
+    out.push_str(&format!("linkprobe_ok{{{labels}}} 0\n"));
+    out.push_str("# HELP linkprobe_last_error Last probe error message.\n");
+    out.push_str("# TYPE linkprobe_last_error gauge\n");
+    out.push_str(&format!(
+        "linkprobe_last_error{{{labels},error=\"{err}\"}} 1\n"
+    ));
+    out.push('\n');
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -80,5 +98,12 @@ mod tests {
         assert!(text.contains("12.5"));
         assert!(text.contains("linkprobe_download_bits_per_second{"));
         assert!(!text.contains("linkprobe_packet_loss_ratio"));
+    }
+
+    #[test]
+    fn formats_failure_gauges() {
+        let text = format_openmetrics_failed("librespeed", "example", "timeout");
+        assert!(text.contains("linkprobe_ok{"));
+        assert!(text.contains("} 0\n"));
     }
 }

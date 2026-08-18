@@ -15,7 +15,7 @@ pub use discovery::{
     server_by_id, servers_list_url,
 };
 pub use error::Error;
-pub use export::format_openmetrics;
+pub use export::{format_openmetrics, format_openmetrics_failed};
 pub use measurement::{Measurement, Throughput};
 pub use result::RunResult;
 pub use server::Server;

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - CLI prints `error: ...` to stderr instead of a Debug dump.
 - iperf3 UDP mode: CLI `--udp` / `--bandwidth` (default 10M); fills jitter and packet loss.
 - iperf3 server discovery: `--list`, `--server-id`, and `--servers-url` with iperf3 default when `--backend iperf3`.
+- Prometheus scrape daemon: `--listen ADDR` and `--interval SECS`; serves GET `/metrics` with OpenMetrics text.
 
 ### Changed
 - README: document LibreSpeed discovery and iperf3 usage.

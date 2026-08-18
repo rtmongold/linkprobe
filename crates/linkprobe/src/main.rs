@@ -1,11 +1,12 @@
+mod metrics_http;
 mod mqtt;
 
 use clap::{Parser, ValueEnum};
 use linkprobe_core::backends::{Iperf3Engine, LibreSpeedEngine};
 use linkprobe_core::{
     DEFAULT_LIBRESPEED_SERVERS_URL, Error, MeasurementEngine, RunResult, Server,
-    fetch_iperf3_servers, fetch_librespeed_servers, format_openmetrics, pick_lowest_latency,
-    server_by_id, servers_list_url,
+    fetch_iperf3_servers, fetch_librespeed_servers, format_openmetrics, format_openmetrics_failed,
+    pick_lowest_latency, server_by_id, servers_list_url,
 };
 use reqwest::blocking::Client;
 
@@ -65,6 +66,14 @@ struct Cli {
     /// Write OpenMetrics text. Omit PATH or use `-` for stdout.
     #[arg(long, value_name = "PATH", num_args = 0..=1, default_missing_value = "-")]
     prometheus_text: Option<String>,
+
+    /// Listen address for Prometheus scrape (e.g. 127.0.0.1:9090). Daemon mode.
+    #[arg(long, value_name = "ADDR")]
+    listen: Option<String>,
+
+    /// Seconds between probes when --listen is set (default: 300).
+    #[arg(long, default_value_t = 300)]
+    interval: u64,
 
     /// MQTT broker URL, e.g. mqtt://127.0.0.1:1883
     #[arg(long)]
@@ -176,6 +185,26 @@ fn main() {
     }
 }
 
+fn run_probe(cli: &Cli) -> Result<RunResult, Error> {
+    match cli.backend {
+        Backend::LibreSpeed => {
+            let server = resolve_librespeed(cli)?;
+            let engine = LibreSpeedEngine::new()?;
+            let measurement = engine.measure(&server)?;
+            Ok(RunResult::new("librespeed", server, measurement))
+        }
+        Backend::Iperf3 => {
+            let server = resolve_iperf3(cli)?;
+            let engine = Iperf3Engine::new()
+                .with_duration_secs(cli.duration)
+                .with_udp(cli.udp)
+                .with_bandwidth(cli.bandwidth.clone());
+            let measurement = engine.measure(&server)?;
+            Ok(RunResult::new("iperf3", server, measurement))
+        }
+    }
+}
+
 fn run() -> Result<(), Error> {
     let cli = Cli::parse();
 
@@ -183,6 +212,10 @@ fn run() -> Result<(), Error> {
         return Err(Error::Message(
             "--udp is only supported for --backend iperf3".into(),
         ));
+    }
+
+    if cli.listen.is_some() && cli.list {
+        return Err(Error::Message("--listen cannot be used with --list".into()));
     }
 
     if cli.list {
@@ -203,23 +236,37 @@ fn run() -> Result<(), Error> {
         return Ok(());
     }
 
-    let result = match cli.backend {
-        Backend::LibreSpeed => {
-            let server = resolve_librespeed(&cli)?;
-            let engine = LibreSpeedEngine::new()?;
-            let measurement = engine.measure(&server)?;
-            RunResult::new("librespeed", server, measurement)
+    if let Some(listen) = &cli.listen {
+        let backend = match cli.backend {
+            Backend::LibreSpeed => "librespeed",
+            Backend::Iperf3 => "iperf3",
+        };
+        let server_label = cli
+            .server
+            .clone()
+            .or_else(|| cli.server_id.map(|id| id.to_string()))
+            .unwrap_or_else(|| "auto".into());
+        let body = metrics_http::shared_body(format_openmetrics_failed(
+            backend,
+            &server_label,
+            "starting",
+        ));
+        metrics_http::spawn_metrics_server(listen, body.clone()).map_err(Error::Message)?;
+
+        loop {
+            eprintln!("linkprobe: probing...");
+            let text = match run_probe(&cli) {
+                Ok(result) => format_openmetrics(&result),
+                Err(e) => format_openmetrics_failed(backend, &server_label, &e.to_string()),
+            };
+            if let Ok(mut guard) = body.write() {
+                *guard = text;
+            }
+            std::thread::sleep(std::time::Duration::from_secs(cli.interval.max(1)));
         }
-        Backend::Iperf3 => {
-            let server = resolve_iperf3(&cli)?;
-            let engine = Iperf3Engine::new()
-                .with_duration_secs(cli.duration)
-                .with_udp(cli.udp)
-                .with_bandwidth(cli.bandwidth);
-            let measurement = engine.measure(&server)?;
-            RunResult::new("iperf3", server, measurement)
-        }
-    };
+    }
+
+    let result = run_probe(&cli)?;
 
     let prom_stdout = cli.prometheus_text.as_deref() == Some("-");
     if !prom_stdout {
