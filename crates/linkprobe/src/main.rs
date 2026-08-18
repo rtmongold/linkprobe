@@ -4,7 +4,8 @@ use clap::{Parser, ValueEnum};
 use linkprobe_core::backends::{Iperf3Engine, LibreSpeedEngine};
 use linkprobe_core::{
     DEFAULT_LIBRESPEED_SERVERS_URL, Error, MeasurementEngine, RunResult, Server,
-    fetch_librespeed_servers, format_openmetrics, pick_lowest_latency, server_by_id,
+    fetch_iperf3_servers, fetch_librespeed_servers, format_openmetrics, pick_lowest_latency,
+    server_by_id, servers_list_url,
 };
 use reqwest::blocking::Client;
 
@@ -29,15 +30,15 @@ struct Cli {
     #[arg(long)]
     server: Option<String>,
 
-    /// Select LibreSpeed server by list id (from --list).
+    /// Select server by list id (from --list).
     #[arg(long)]
     server_id: Option<u64>,
 
-    /// Print LibreSpeed server list and exit.
+    /// Print server list and exit.
     #[arg(long)]
     list: bool,
 
-    /// LibreSpeed servers JSON URL.
+    /// Server list JSON URL (LibreSpeed or iperf3 depending on the --backend).
     #[arg(long, default_value = DEFAULT_LIBRESPEED_SERVERS_URL)]
     servers_url: String,
 
@@ -133,6 +134,30 @@ fn resolve_librespeed(cli: &Cli) -> Result<Server, Error> {
     Ok(server)
 }
 
+fn resolve_iperf3(cli: &Cli) -> Result<Server, Error> {
+    if cli.server.is_some() && cli.server_id.is_some() {
+        return Err(Error::Message(
+            "use only one of --server or --server-id".into(),
+        ));
+    }
+
+    if let Some(host) = &cli.server {
+        return Ok(Server::iperf3(host.clone(), cli.port));
+    }
+
+    let client = list_client()?;
+    let url = servers_list_url(true, &cli.servers_url);
+    let servers = fetch_iperf3_servers(&client, url)?;
+
+    if let Some(id) = cli.server_id {
+        return server_by_id(&servers, id);
+    }
+
+    Err(Error::Message(
+        "--server or --server-id is required for --backend iperf3".into(),
+    ))
+}
+
 fn write_prometheus_text(path: &str, text: &str) -> Result<(), Error> {
     if path == "-" {
         print!("{text}");
@@ -161,15 +186,19 @@ fn run() -> Result<(), Error> {
     }
 
     if cli.list {
-        if !matches!(cli.backend, Backend::LibreSpeed) {
-            return Err(Error::Message(
-                "--list is only supported for LibreSpeed".into(),
-            ));
-        }
         let client = list_client()?;
-        let servers = fetch_librespeed_servers(&client, &cli.servers_url)?;
+        let servers = match cli.backend {
+            Backend::LibreSpeed => fetch_librespeed_servers(&client, &cli.servers_url)?,
+            Backend::Iperf3 => {
+                let list_url = servers_list_url(true, &cli.servers_url);
+                fetch_iperf3_servers(&client, list_url)?
+            }
+        };
         for s in servers {
-            println!("{:>4} {}", s.id, s.name);
+            use std::io::Write;
+            if writeln!(std::io::stdout(), "{:>4} {}", s.id, s.name).is_err() {
+                break;
+            }
         }
         return Ok(());
     }
@@ -182,14 +211,8 @@ fn run() -> Result<(), Error> {
             RunResult::new("librespeed", server, measurement)
         }
         Backend::Iperf3 => {
-            let host = cli.server.ok_or_else(|| {
-                Error::Message("--server is required for --backend iperf3".into())
-            })?;
-            let server = Server::iperf3(host, cli.port);
-            let engine = Iperf3Engine::new()
-                .with_duration_secs(cli.duration)
-                .with_udp(cli.udp)
-                .with_bandwidth(cli.bandwidth);
+            let server = resolve_iperf3(&cli)?;
+            let engine = Iperf3Engine::new().with_duration_secs(cli.duration);
             let measurement = engine.measure(&server)?;
             RunResult::new("iperf3", server, measurement)
         }
