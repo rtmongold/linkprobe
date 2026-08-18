@@ -13,7 +13,7 @@ LibreSpeed and iperf3 backend work via the `linkprobe` CLI.
   by ping.
 - iperf3: requires `iperf3` on `PATH` ; optional `--list` / `--server-id` from the public server JSON.
 - After a run: human or `--json` stdout, optional MQTT publish, optional
-  OpenMetrics file/stdout.
+  OpenMetrics file/stdout or HTTP scrape via `--listen`.
 
 ## Usage
 
@@ -42,6 +42,10 @@ cargo run -p linkprobe -- --backend iperf3 --server-id 1 --duration 5
 # Prometheus OpenMetrics (stdout, or a file for node_exporter textfile collector)
 cargo run -p linkprobe -- --server-id 52 --prometheus-text -
 cargo run -p linkprobe -- --server-id 52 --prometheus-text /var/lib/node_exporter/textfile_collector/linkprobe.prom
+
+# Prometheus scrape (daemon; GET /metrics)
+cargo run -p linkprobe -- --server-id 52 --listen 127.0.0.1:9090 --interval 300
+curl -s http://127.0.0.1:9090/metrics | head
 
 # MQTT (requires a broker)
 cargo run -p linkprobe -- --server-id 52 --mqtt-url mqtt://127.0.0.1:1883
