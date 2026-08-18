@@ -13,6 +13,8 @@ pub const DEFAULT_LIBRESPEED_SERVERS_URL: &str =
 pub const DEFAULT_IPERF3_SERVERS_URL: &str =
     "https://export.iperf3serverlist.net/listed_iperf3_servers.json";
 
+pub const FAILOVER_EXTRA: usize = 2;
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct LibreSpeedListEntry {
     pub id: Option<u64>,
@@ -184,19 +186,41 @@ pub fn ping_ms(client: &Client, server: &Server) -> Result<f64, Error> {
     Ok(start.elapsed().as_secs_f64() * 1000.0)
 }
 
-pub fn pick_lowest_latency(client: &Client, servers: &[Server]) -> Result<(Server, f64), Error> {
-    let mut best: Option<(Server, f64)> = None;
+pub fn rank_by_latency(client: &Client, servers: &[Server]) -> Vec<(Server, f64)> {
+    let mut ranked = Vec::new();
     for s in servers {
-        match ping_ms(client, s) {
-            Ok(ms) => {
-                if best.as_ref().map(|(_, b)| ms < *b).unwrap_or(true) {
-                    best = Some((s.clone(), ms));
-                }
-            }
-            Err(_) => continue,
+        if let Ok(ms) = ping_ms(client, s) {
+            ranked.push((s.clone(), ms));
         }
     }
-    best.ok_or_else(|| Error::Message("no LibreSpeed servers responded to ping".into()))
+    ranked.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+    ranked
+}
+
+pub fn pick_lowest_latency(client: &Client, servers: &[Server]) -> Result<(Server, f64), Error> {
+    rank_by_latency(client, servers)
+        .into_iter()
+        .next()
+        .ok_or_else(|| Error::Message("no LibreSpeed servers responded to ping".into()))
+}
+
+/// `preferred` first, then up to `extra` others in ping order (excluding preferred).
+pub fn failover_candidates(
+    ranked: &[(Server, f64)],
+    preferred: &Server,
+    extra: usize,
+) -> Vec<Server> {
+    let mut out = vec![preferred.clone()];
+    for (s, _) in ranked {
+        if out.len() > extra {
+            break;
+        }
+        if s.id == preferred.id || s.base_url == preferred.base_url {
+            continue;
+        }
+        out.push(s.clone());
+    }
+    out
 }
 
 pub fn server_by_id(servers: &[Server], id: u64) -> Result<Server, Error> {
@@ -276,5 +300,18 @@ mod tests {
             servers_list_url(true, "https://example/list.json"),
             "https://example/list.json"
         );
+    }
+
+    #[test]
+    fn failover_candidates_preferred_then_ping_order() {
+        let a = Server::librespeed("https://a/");
+        let b = Server::librespeed("https://b/");
+        let c = Server::librespeed("https://c/");
+        let ranked = vec![(a.clone(), 5.0), (b.clone(), 10.0), (c.clone(), 20.0)];
+        let got = failover_candidates(&ranked, &b, 2);
+        assert_eq!(got.len(), 3);
+        assert_eq!(got[0].base_url, "https://b/");
+        assert_eq!(got[1].base_url, "https://a/");
+        assert_eq!(got[2].base_url, "https://c/");
     }
 }

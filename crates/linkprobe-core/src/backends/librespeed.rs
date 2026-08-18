@@ -114,6 +114,28 @@ impl LibreSpeedEngine {
         })?;
         Ok(Throughput::from_bps(len * 8.0 / secs))
     }
+
+    pub fn measure_with_failover(
+        &self,
+        candidates: &[Server],
+    ) -> Result<(Server, Measurement), Error> {
+        if candidates.is_empty() {
+            return Err(Error::Message("no LibreSpeed candidates".into()));
+        }
+        let mut last_err: Option<Error> = None;
+        for (i, server) in candidates.iter().enumerate() {
+            match self.measure(server) {
+                Ok(m) => return Ok((server.clone(), m)),
+                Err(e) => {
+                    if i + 1 < candidates.len() {
+                        eprintln!("linkprobe: {} failed, trying next server", server.name);
+                    }
+                    last_err = Some(e);
+                }
+            }
+        }
+        Err(last_err.expect("non-empty candidates"))
+    }
 }
 
 impl Default for LibreSpeedEngine {
@@ -182,5 +204,56 @@ mod tests {
         ping.assert();
         download.assert();
         upload.assert();
+    }
+
+    #[test]
+    fn failovers_to_second_server() {
+        let mut bad = MockServer::new();
+        let mut good = MockServer::new();
+
+        let _ping_bad = bad
+            .mock("GET", "/backend/empty.php")
+            .with_status(200)
+            .with_body("")
+            .expect_at_least(PING_SAMPLES)
+            .create();
+        let _dl_bad = bad
+            .mock("GET", "/backend/garbage.php")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "ckSize".into(),
+                DOWNLOAD_CHUNK_SIZE.to_string(),
+            ))
+            .with_status(500)
+            .with_body("nope")
+            .create();
+
+        let _ping_good = good
+            .mock("GET", "/backend/empty.php")
+            .with_status(200)
+            .with_body("")
+            .expect_at_least(PING_SAMPLES)
+            .create();
+        let dl_body = vec![1_u8; DOWNLOAD_CHUNK_SIZE as usize * 1024 * 1024];
+        let _dl_good = good
+            .mock("GET", "/backend/garbage.php")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "ckSize".into(),
+                DOWNLOAD_CHUNK_SIZE.to_string(),
+            ))
+            .with_status(200)
+            .with_body(dl_body)
+            .create();
+        let _ul_good = good
+            .mock("POST", "/backend/empty.php")
+            .with_status(200)
+            .with_body("")
+            .create();
+
+        let engine = LibreSpeedEngine::new().unwrap();
+        let a = Server::librespeed(bad.url());
+        let b = Server::librespeed(good.url());
+        let (used, m) = engine.measure_with_failover(&[a, b.clone()]).unwrap();
+        assert_eq!(used.base_url, b.base_url);
+        assert!(m.download.unwrap().bps > 0.0);
     }
 }
