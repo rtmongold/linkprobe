@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - README positioning (what linkprobe is / is not), CLI modes, and server selection tables.
 - `linkprobe-core` crate-level rustdoc, type docs, and a compile-checked library example.
 - GitHub Actions release workflow: attach Linux/macOS/Windows binaries to an existing GitHub Release.
+- crates.io package metadata for `linkprobe` and `linkprobe-core` (readme, keywords, categories, docs URL, 
+  rust-version) and per-crate license files.
+- `linkprobe-core` examples: `librespeed` and `openmetrics`.
+- README crates.io/docs.rs/CI badges, install block (`cargo install` / `cargo add`), and library quick-start.
+- CI: `cargo doc -p linkprobe-core --no-deps` on the Ubuntu fmt job.
+- GitHub Actions `deploy-crates-io.yml`: record GitHub Releases against the `crates-io` environment (audit trail;   
+  publish stays manual).
 
 ## [0.2.0] - 2026-08-18
 

@@ -12,6 +12,7 @@ jobs:
         with:
           components: rustfmt
       - run: cargo fmt --all -- --check
+      - run: cargo doc -p linkprobe-core --no-deps
 
   ci:
     needs: fmt

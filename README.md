@@ -3,6 +3,11 @@
 Protocol-agnostic network link measurement in Rust (LibreSpeed and iperf3;
 JSON, MQTT, and Prometheus text exporters).
 
+[![crates.io](https://img.shields.io/crates/v/linkprobe.svg)](https://crates.io/crates/linkprobe)
+[![linkprobe-core](https://img.shields.io/crates/v/linkprobe-core.svg)](https://crates.io/crates/linkprobe-core)
+[![Docs](https://docs.rs/linkprobe-core/badge.svg)](https://docs.rs/linkprobe-core)
+[![CI](https://github.com/rtmongold/linkprobe/actions/workflows/ci.yml/badge.svg)](https://github.com/rtmongold/linkprobe/actions/workflows/ci.yml)
+
 Not affiliated with Ookla or speedtest.net.
 
 ## What linkprobe is
@@ -28,6 +33,42 @@ Not affiliated with Ookla or speedtest.net.
 - iperf3: requires `iperf3` on `PATH`; optional `--list` / `--server-id` from the public server JSON.
 - After a run: human or `--json` stdout, optional MQTT publish, optional
   OpenMetrics file/stdout or HTTP scrape via `--listen`.
+
+## Install
+
+```bash
+cargo install linkprobe
+cargo add linkprobe-core
+```
+
+Pre-built binaries are also attached to [GitHub Releases](https://github.com/rtmongold/linkprobe/releases)
+(Linux x86_64, macOS Apple Silicon, Windows x86_64). The iperf3 backend still needs
+`iperf3` on `PATH`; LibreSpeed does not.
+
+## Library quick start
+
+```rust
+use linkprobe_core::backends::LibreSpeedEngine;
+use linkprobe_core::{MeasurementEngine, Server};
+
+fn main() -> Result<(), linkprobe_core::Error> {
+    let server = Server::librespeed("https://example-librespeed/");
+    let engine = LibreSpeedEngine::new()?;
+    let measurement = engine.measure(&server)?;
+
+    if let Some(ms) = measurement.latency_ms {
+        println!("latency: {ms:.1} ms");
+    }
+    Ok(())
+}
+```
+
+Examples in the repo:
+
+```bash
+cargo run -p linkprobe-core --example librespeed -- https://example-librespeed/
+cargo run -p linkprobe-core --example openmetrics
+```
 
 ## CLI modes
 
@@ -69,10 +110,6 @@ iperf3 install:
 - Linux: distro package (`iperf3`)
 - macOS: `brew install iperf3`
 - Windows: [iperf3 Windows builds](https://github.com/esnet/iperf) or `winget` / `choco`; put `iperf3` on `PATH`
-
-Pre-built binaries are attached to [GitHub Releases](https://github.com/rtmongold/linkprobe/releases)
-(Linux x86_64, macOS Apple Silicon, Windows x86_64). The iperf3 backend still needs
-`iperf3` on `PATH`; LibreSpeed does not.
 
 ## Usage
 
@@ -125,7 +162,7 @@ MQTT extras: `--mqtt-username`, `--mqtt-password`
 - `linkprobe-core` — measurement types, LibreSpeed/iperf3 backends, discovery, OpenMetrics formatting
 - `linkprobe` — CLI, MQTT client, Prometheus scrape HTTP server
 
-Library API docs: `cargo doc -p linkprobe-core --open` (or docs.rs after publish).
+Library API: [docs.rs/linkprobe-core](https://docs.rs/linkprobe-core) (`cargo doc -p linkprobe-core --open` locally).
 
 ## License
 
