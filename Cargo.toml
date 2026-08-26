@@ -4,8 +4,10 @@ members = ["crates/linkprobe-core", "crates/linkprobe"]
 
 [workspace.package]
 edition = "2024"
+rust-version = "1.85"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rtmongold/linkprobe"
+homepage = "https://github.com/rtmongold/linkprobe"
 authors = ["Robert Mongold rtmongold@gmail.com"]
 
 [workspace.dependencies]

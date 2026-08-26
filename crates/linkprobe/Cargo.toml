@@ -2,10 +2,23 @@
 name = "linkprobe"
 version = "0.2.0"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
 authors.workspace = true
 description = "CLI for protocol-agnostic network link measurement"
+documentation = "https://docs.rs/linkprobe-core"
+readme = "../../README.md"
+keywords = ["network", "speedtest", "librespeed", "iperf3", "prometheus"]
+categories = ["network-programming", "command-line-utilities"]
+include = [
+    "src/**/*",
+    "Cargo.toml",
+    "LICENSE-MIT",
+    "LICENSE-APACHE",
+    "../../README.md",
+]
 
 [dependencies]
 linkprobe-core = { workspace = true }
