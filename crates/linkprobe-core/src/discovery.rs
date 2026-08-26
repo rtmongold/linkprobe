@@ -13,6 +13,8 @@ pub const DEFAULT_LIBRESPEED_SERVERS_URL: &str =
 pub const DEFAULT_IPERF3_SERVERS_URL: &str =
     "https://export.iperf3serverlist.net/listed_iperf3_servers.json";
 
+/// How many additional list servers the CLI may try after the preferred host fails
+/// (auto-pick and `--server-id` only; explicit `--server` URLs do not rotate).
 pub const FAILOVER_EXTRA: usize = 2;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -69,11 +71,13 @@ fn join(base: &str, path: &str) -> Result<Url, Error> {
     Ok(Url::parse(&base)?.join(path)?)
 }
 
+/// Parse a LibreSpeed server list JSON document into [`Server`] values.
 pub fn parse_librespeed_servers(json: &str) -> Result<Vec<Server>, Error> {
     let entries: Vec<LibreSpeedListEntry> = serde_json::from_str(json)?;
     Ok(entries.into_iter().map(|e| e.into_server()).collect())
 }
 
+/// Download and parse a LibreSpeed server list from `list_url`.
 pub fn fetch_librespeed_servers(client: &Client, list_url: &str) -> Result<Vec<Server>, Error> {
     let text = client.get(list_url).send()?.error_for_status()?.text()?;
     parse_librespeed_servers(&text)
@@ -142,6 +146,7 @@ pub fn parse_port_range(raw: &str) -> Result<Vec<u16>, Error> {
     Ok(vec![port])
 }
 
+/// Parse an iperf3 public server list JSON document into [`Server`] values.
 pub fn parse_iperf3_servers(json: &str) -> Result<Vec<Server>, Error> {
     let entries: Vec<Iperf3ListEntry> = serde_json::from_str(json)?;
     let mut servers = Vec::new();
@@ -164,11 +169,13 @@ pub fn parse_iperf3_servers(json: &str) -> Result<Vec<Server>, Error> {
     Ok(servers)
 }
 
+/// Download and parse an iperf3 server list from `list_url`.
 pub fn fetch_iperf3_servers(client: &Client, list_url: &str) -> Result<Vec<Server>, Error> {
     let text = client.get(list_url).send()?.error_for_status()?.text()?;
     parse_iperf3_servers(&text)
 }
 
+/// Pick the default iperf3 list URL when the CLI still has the LibreSpeed default configured.
 pub fn servers_list_url(backend_is_iperf3: bool, servers_url: &str) -> &str {
     if backend_is_iperf3 && servers_url == DEFAULT_LIBRESPEED_SERVERS_URL {
         DEFAULT_IPERF3_SERVERS_URL
@@ -186,6 +193,7 @@ pub fn ping_ms(client: &Client, server: &Server) -> Result<f64, Error> {
     Ok(start.elapsed().as_secs_f64() * 1000.0)
 }
 
+/// Ping servers and return those that responded, sorted by ascending latency (ms).
 pub fn rank_by_latency(client: &Client, servers: &[Server]) -> Vec<(Server, f64)> {
     let mut ranked = Vec::new();
     for s in servers {
@@ -197,6 +205,7 @@ pub fn rank_by_latency(client: &Client, servers: &[Server]) -> Vec<(Server, f64)
     ranked
 }
 
+/// Return the server with the lowest ping latency, or an error if none responded.
 pub fn pick_lowest_latency(client: &Client, servers: &[Server]) -> Result<(Server, f64), Error> {
     rank_by_latency(client, servers)
         .into_iter()
@@ -204,7 +213,7 @@ pub fn pick_lowest_latency(client: &Client, servers: &[Server]) -> Result<(Serve
         .ok_or_else(|| Error::Message("no LibreSpeed servers responded to ping".into()))
 }
 
-/// `preferred` first, then up to `extra` others in ping order (excluding preferred).
+/// Build a probe order: `preferred` first, then up to `extra` other servers by ping rank.
 pub fn failover_candidates(
     ranked: &[(Server, f64)],
     preferred: &Server,
@@ -223,6 +232,7 @@ pub fn failover_candidates(
     out
 }
 
+/// Look up a server by numeric list id (string match on [`Server::id`]).
 pub fn server_by_id(servers: &[Server], id: u64) -> Result<Server, Error> {
     let key = id.to_string();
     servers

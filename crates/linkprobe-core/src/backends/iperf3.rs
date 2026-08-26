@@ -10,6 +10,10 @@ use crate::{Error, MeasurementEngine};
 const DEFAULT_DURATION_SECS: u64 = 5;
 const DEFAULT_PORT: u16 = 5201;
 
+/// iperf3 measurement by spawning the system `iperf3` binary with `-J` JSON output.
+///
+/// Requires `iperf3` on `PATH` unless overridden with [`with_binary`](Self::with_binary).
+/// UDP mode ([`with_udp`](Self::with_udp)) fills jitter and packet loss; TCP mode does not.
 #[derive(Debug, Clone)]
 pub struct Iperf3Engine {
     binary: PathBuf,
@@ -19,6 +23,7 @@ pub struct Iperf3Engine {
 }
 
 impl Iperf3Engine {
+    /// Default engine: `iperf3` on PATH, 5 s per direction, TCP.
     pub fn new() -> Self {
         Self {
             binary: PathBuf::from("iperf3"),
@@ -28,21 +33,25 @@ impl Iperf3Engine {
         }
     }
 
+    /// Path to the `iperf3` executable (default: `"iperf3"` on PATH).
     pub fn with_binary(mut self, binary: impl Into<PathBuf>) -> Self {
         self.binary = binary.into();
         self
     }
 
+    /// Test duration in seconds for each iperf3 direction (minimum 1).
     pub fn with_duration_secs(mut self, secs: u64) -> Self {
         self.duration_secs = secs.max(1);
         self
     }
 
+    /// Use UDP (`-u`) instead of TCP; enables packet-loss reporting when the server supports it.
     pub fn with_udp(mut self, udp: bool) -> Self {
         self.udp = udp;
         self
     }
 
+    /// UDP target bandwidth passed to iperf3 `-b` (default `"10M"`).
     pub fn with_bandwidth(mut self, bandwidth: impl Into<String>) -> Self {
         let b = bandwidth.into();
         self.bandwidth = if b.is_empty() { "10M".into() } else { b };
