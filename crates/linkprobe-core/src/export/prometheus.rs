@@ -6,7 +6,12 @@ fn escape_label(s: &str) -> String {
         .replace('\n', "\\n")
 }
 
-/// OpenMetrics /Prometheus text exposition for a single run.
+/// OpenMetrics / Prometheus text exposition for a successful [`RunResult`].
+///
+/// Emits stable gauge names: `linkprobe_ok`, `linkprobe_latency_milliseconds`,
+/// `linkprobe_jitter_milliseconds`, `linkprobe_download_bits_per_second`,
+/// `linkprobe_upload_bits_per_second`, and `linkprobe_packet_loss`. Only metrics present on
+/// the result are written.
 pub fn format_openmetrics(result: &RunResult) -> String {
     let backend = escape_label(&result.backend);
     let server = escape_label(&result.server.name);
@@ -55,6 +60,9 @@ pub fn format_openmetrics(result: &RunResult) -> String {
     out
 }
 
+/// OpenMetrics text for a failed probe (for scrape daemons that must always expose metrics).
+///
+/// Sets `linkprobe_ok` to `0` and adds a `linkprobe_last_error` series with the error message.
 pub fn format_openmetrics_failed(backend: &str, server: &str, err: &str) -> String {
     let backend = escape_label(backend);
     let server = escape_label(server);

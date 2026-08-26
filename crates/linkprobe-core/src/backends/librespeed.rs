@@ -12,12 +12,17 @@ const DOWNLOAD_CHUNK_SIZE: u32 = 4; // 4 MiB from garbage.php
 const UPLOAD_BYTES: usize = 2 * 1024 * 1024;
 const HTTP_ATTEMPTS: usize = 3;
 
+/// LibreSpeed-compatible measurement over blocking HTTPS.
+///
+/// Each HTTP phase (ping, download, upload) is retried up to three times on timeout,
+/// connection failure, or truncated bodies.
 #[derive(Debug, Clone)]
 pub struct LibreSpeedEngine {
     client: Client,
 }
 
 impl LibreSpeedEngine {
+    /// Build an engine with a default reqwest client (60 s timeout, linkprobe user agent).
     pub fn new() -> Result<Self, Error> {
         let client = Client::builder()
             .user_agent(concat!("linkprobe/", env!("CARGO_PKG_VERSION")))

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- README positioning (what linkprobe is / is not), CLI modes, and server selection tables.
+- `linkprobe-core` crate-level rustdoc, type docs, and a compile-checked library example.
 - GitHub Actions release workflow: attach Linux/macOS/Windows binaries to an existing GitHub Release.
 
 ## [0.2.0] - 2026-08-18

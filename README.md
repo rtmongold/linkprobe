@@ -5,15 +5,54 @@ JSON, MQTT, and Prometheus text exporters).
 
 Not affiliated with Ookla or speedtest.net.
 
-## Status
+## What linkprobe is
 
-LibreSpeed and iperf3 backend work via the `linkprobe` CLI. 
+- **Link measurement** over LibreSpeed-compatible HTTPS or the system `iperf3` binary.
+- **Two surfaces:** the [`linkprobe`](crates/linkprobe) CLI for ops and homelab use, and the
+  [`linkprobe-core`](crates/linkprobe-core) library to embed the same engines in your own apps.
+- **Outputs:** human-readable text, JSON, OpenMetrics (file, stdout, or HTTP scrape), and
+  optional MQTT publish.
 
-- LibreSpeed: measure a URL, pick from the public list, or auto-select by ping.
+## What linkprobe is not
+
+- **Not Ookla or speedtest.net** — no affiliation and no proprietary speedtest SDK.
+- **Not a bundled speedtest engine** — measurements run against LibreSpeed-compatible servers
+  you choose or public lists, or against an `iperf3` endpoint you control.
+- **Not [probe-rs](https://crates.io/crates/probe-rs)** — linkprobe measures network links;
+  probe-rs is an embedded debugging toolkit.
+
+## Features
+
+- LibreSpeed: measure a URL, pick from the public list, or auto-select by lowest ping.
   `--server-id` and auto-pick try up to two more hosts if the first still fails after HTTP retries.
 - iperf3: requires `iperf3` on `PATH`; optional `--list` / `--server-id` from the public server JSON.
 - After a run: human or `--json` stdout, optional MQTT publish, optional
   OpenMetrics file/stdout or HTTP scrape via `--listen`.
+
+## CLI modes
+
+| Mode | Flags | Behavior |
+|------|-------|----------|
+| One-shot | default (no `--listen`) | Run one probe; print human text or `--json` to stdout |
+| Prometheus text | `--prometheus-text [PATH]` | Write OpenMetrics text; `-` prints metrics to stdout instead of human output |
+| Scrape daemon | `--listen ADDR` + `--interval SECS` | Background HTTP server on GET `/metrics`; reprobe on an interval |
+| MQTT push | `--mqtt-url URL` | After each probe, publish the JSON `RunResult` (default topic: `linkprobe/result`) |
+
+Modes can be combined where it makes sense (for example one-shot probe plus `--prometheus-text`
+and `--mqtt-url`).
+
+## Server selection
+
+| Input | Behavior |
+|-------|----------|
+| `--server URL` or `--server HOST` | Single explicit LibreSpeed base URL or iperf3 host only (no list failover) |
+| `--server-id N` | Pick entry `N` from `--list`; LibreSpeed auto-pick / `--server-id` may try up to two more list servers after retries |
+| `--server` omitted (LibreSpeed default backend) | Fetch the public list, rank by ping, probe the fastest |
+| `--list` | Print server ids and names, then exit |
+
+LibreSpeed probes retry each HTTP phase up to three times. When using auto-pick or `--server-id`,
+linkprobe may rotate through up to two additional list servers (by ping order) if the preferred
+host still fails. On rotation you will see `linkprobe: <name> failed, trying next server` on stderr.
 
 ## Requirements
 
@@ -81,15 +120,12 @@ Optional: `--servers-url` for a custom server list (LibreSpeed or iperf3 JSON, d
 
 MQTT extras: `--mqtt-username`, `--mqtt-password`
 
-Public LibreSpeed hosts can drop connections: linkprobe retries each phase up to three times,
-then auto-pick and `--server-id` try up to two more list servers (by ping). Explicit `--server`
-URLs are single-host only. On rotation you will see `linkprobe: <name> failed, trying next server`
-on stderr.
-
 ## Crates
 
-- `linkprobe-core` - measurement types, LibreSpeed/iperf3 backends, discovery, OpenMetrics
-- `linkprobe` - CLI, MQTT, scrape HTTP
+- `linkprobe-core` — measurement types, LibreSpeed/iperf3 backends, discovery, OpenMetrics formatting
+- `linkprobe` — CLI, MQTT client, Prometheus scrape HTTP server
+
+Library API docs: `cargo doc -p linkprobe-core --open` (or docs.rs after publish).
 
 ## License
 
@@ -97,4 +133,4 @@ MIT OR Apache-2.0
 
 ## History
 
-Inspired by [speedtest-rs](https://github.com/nelsonjchen/speedtest-rs); see `NOTICE`.
+Inspired by [speedtest-rs](https://github.com/nelsonjchen/speedtest-rs); see [NOTICE](NOTICE).

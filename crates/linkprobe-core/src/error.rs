@@ -1,13 +1,25 @@
 use thiserror::Error;
 
+/// Failure from discovery, measurement, or export helpers.
+///
+/// Match on this instead of string-matching `Display` output:
+///
+/// - [`Error::Iperf3Missing`](Self::Iperf3Missing) — `iperf3` binary not found when using
+///   [`Iperf3Engine`](crate::backends::Iperf3Engine)
+/// - [`Error::Probe`](Self::Probe) — a named measurement phase failed (for example `"download"`);
+///   the `source` chain holds the underlying error
+/// - [`Error::Http`](Self::Http), [`Error::Io`](Self::Io), [`Error::Json`](Self::Json) —
+///   transparent wrappers for reqwest, I/O, and JSON errors
 #[derive(Debug, Error)]
 pub enum Error {
+    /// General failure with a message (unknown server id, invalid CLI combination in the binary crate, etc.).
     #[error("{0}")]
     Message(String),
 
     #[error("not implemented")]
     NotImplemented,
 
+    /// A measurement phase failed; inspect `phase` and `source`.
     #[error("{phase} failed: {source}")]
     Probe {
         phase: &'static str,
@@ -18,6 +30,7 @@ pub enum Error {
     #[error("iperf3 not found on PATH (install iperf3 to use --backend iperf3)")]
     Iperf3Missing,
 
+    /// MQTT publish failure (CLI crate).
     #[error("mqtt: {0}")]
     Mqtt(String),
 
