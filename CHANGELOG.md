@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## [0.2.1] - 2026-08-26
+
 ### Added
 
 - README positioning (what linkprobe is / is not), CLI modes, and server selection tables.
